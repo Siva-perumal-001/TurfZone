@@ -1,12 +1,7 @@
 import { useState } from "react";
-import bgImg from "../assets/bg-img-1.jpg"
-import {
-    FiMail,
-    FiLock,
-    FiEye,
-    FiEyeOff,
-  } from "react-icons/fi";
-  
+import bgImg from "../assets/bg-img-1.jpg";
+import { apiRequest } from "../api/api.js";
+import { FiMail, FiLock, FiEye, FiEyeOff, FiUser } from "react-icons/fi";
 
 export default function Auth() {
   const [isSignup, setIsSignup] = useState(false);
@@ -38,71 +33,77 @@ export default function Auth() {
   };
 
   /* ---------- LOGIN ---------- */
-  const handleLogin = () => {
-    if (!formData.email || !formData.password) {
-      setError("Please fill all fields");
-      resetForm();
-      return;
-    }
-
+  const handleLogin = async (e) => {
+    e.preventDefault();
     setError("");
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const data = await apiRequest("/auth/login", "POST", {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
       resetForm();
-      alert("Login successful (frontend)");
-    }, 1500);
+      alert("Login successful");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ---------- SIGNUP ---------- */
-  const handleSignup = () => {
-    if (
-      !formData.name ||
-      !formData.email ||
-      !formData.password ||
-      !formData.confirmPassword
-    ) {
-      setError("All fields are required");
-      resetForm();
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      resetForm();
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      resetForm();
-      return;
-    }
-
+  const handleSignup = async (e) => {
+    e.preventDefault();
     setError("");
+
+    const { name, email, password, confirmPassword } = formData;
+
+    if (!name || !email || !password || !confirmPassword) {
+      setError("All fields are required");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await apiRequest("/auth/signup", "POST", {
+        name,
+        email,
+        password,
+      });
+
+      alert("Signup successful. Please login.");
       resetForm();
-      alert("Signup successful (frontend)");
-    }, 1500);
+      setIsSignup(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
-  
 
   return (
     <div
       className="min-h-screen flex items-center justify-center bg-cover bg-center relative px-4"
-      style={{
-        backgroundImage:
-        `url(${bgImg})`,
-      }}
+      style={{ backgroundImage: `url(${bgImg})` }}
     >
-      {/* Dark Overlay */}
       <div className="absolute inset-0 bg-black/60"></div>
 
-      {/* Auth Card */}
       <div className="relative w-full max-w-md md:max-w-4xl bg-white/10 backdrop-blur-sm rounded-2xl overflow-hidden shadow-2xl">
         <div
           className={`flex w-[200%] transition-transform duration-700 ease-in-out ${
@@ -113,51 +114,51 @@ export default function Auth() {
           <div className="w-1/2 p-6 sm:p-10 text-white">
             <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
             <p className="text-gray-300 text-sm mb-6">
-              Book your turf & play harder ⚽
+              Book your turf & play harder 🏏
             </p>
 
             {error && !isSignup && (
               <p className="text-red-400 text-sm mb-3">{error}</p>
             )}
 
-            {/* Email */}
-            <div className="relative mb-3">
-            <FiMail className="absolute left-3 top-3.5 text-gray-300" size={18} />
-              <input
-                name="email"
-                onChange={handleChange}
-                placeholder="Email or Mobile"
-                value={formData.email}
-                className="w-full pl-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
+            <form onSubmit={handleLogin}>
+              <div className="relative mb-3">
+                <FiMail className="absolute left-3 top-3.5 text-gray-300" />
+                <input
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Email"
+                  className="w-full pl-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
 
-            {/* Password */}
-            <div className="relative mb-4">
-            <FiLock className="absolute left-3 top-3.5 text-gray-300" size={18} />
-              <input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                onChange={handleChange}
-                placeholder="Password"
-                value={formData.password}
-                className="w-full pl-10 pr-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <span
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 cursor-pointer"
+              <div className="relative mb-4">
+                <FiLock className="absolute left-3 top-3.5 text-gray-300" />
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Password"
+                  className="w-full pl-10 pr-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <span
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 cursor-pointer"
+                >
+                  {showPassword ? <FiEyeOff /> : <FiEye />}
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700 transition p-3 rounded-lg font-semibold disabled:opacity-60"
               >
-                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-              </span>
-            </div>
-
-            <button
-              disabled={loading}
-              onClick={handleLogin}
-              className="w-full bg-green-600 hover:bg-green-700 transition p-3 rounded-lg font-semibold disabled:opacity-60"
-            >
-              {loading ? "Logging in..." : "Login"}
-            </button>
+                {loading ? "Logging in..." : "Login"}
+              </button>
+            </form>
 
             <p className="mt-5 text-sm">
               Don’t have an account?
@@ -184,65 +185,69 @@ export default function Auth() {
               <p className="text-red-400 text-sm mb-3">{error}</p>
             )}
 
-            <input
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Full Name"
-              className="w-full mb-3 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
-            />
+            <form onSubmit={handleSignup}>
+              <div className="relative mb-3">
+                <FiUser className="absolute left-3 top-3.5 text-gray-300" />
+                <input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="Full Name"
+                  className="w-full pl-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
 
-            <input
-              name="email"
-              onChange={handleChange}
-              placeholder="Email or Mobile"
-              value={formData.email}
-              className="w-full mb-3 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
-            />
+              <div className="relative mb-3">
+                <FiMail className="absolute left-3 top-3.5 text-gray-300" />
+                <input
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Email"
+                  className="w-full pl-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
 
-            <div className="relative mb-3">
-              <input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                onChange={handleChange}
-                placeholder="Password"
-                value={formData.password}
-                className="w-full pr-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <span
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3 cursor-pointer"
+              <div className="relative mb-3">
+                <FiLock className="absolute left-3 top-3.5 text-gray-300" />
+                <input
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Password"
+                  className="w-full pl-10 pr-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+
+              <div className="relative mb-4">
+                <FiLock className="absolute left-3 top-3.5 text-gray-300" />
+                <input
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Confirm Password"
+                  className="w-full pl-10 pr-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <span
+                  onClick={() =>
+                    setShowConfirmPassword(!showConfirmPassword)
+                  }
+                  className="absolute right-3 top-3 cursor-pointer"
+                >
+                  {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-green-600 hover:bg-green-700 transition p-3 rounded-lg font-semibold disabled:opacity-60"
               >
-                {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-              </span>
-            </div>
-
-            <div className="relative mb-4">
-              <input
-                name="confirmPassword"
-                type={showConfirmPassword ? "text" : "password"}
-                onChange={handleChange}
-                value={formData.confirmPassword}
-                placeholder="Confirm Password"
-                className="w-full pr-10 p-3 rounded-lg bg-white/20 placeholder-gray-300 outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <span
-                onClick={() =>
-                  setShowConfirmPassword(!showConfirmPassword)
-                }
-                className="absolute right-3 top-3 cursor-pointer"
-              >
-                {showConfirmPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
-              </span>
-            </div>
-
-            <button
-              disabled={loading}
-              onClick={handleSignup}
-              className="w-full bg-green-600 hover:bg-green-700 transition p-3 rounded-lg font-semibold disabled:opacity-60"
-            >
-              {loading ? "Creating account..." : "Sign Up"}
-            </button>
+                {loading ? "Creating account..." : "Sign Up"}
+              </button>
+            </form>
 
             <p className="mt-5 text-sm">
               Already have an account?
